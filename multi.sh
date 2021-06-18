@@ -13,16 +13,18 @@ yellow(){
 blue(){
     echo -e "\033[36m\033[01m$1\033[0m"
 }
-
-get_char(){
-	SAVEDSTTY=`stty -g`
-	stty -echo
-	stty cbreak
-	dd if=/dev/tty bs=1 count=1 2> /dev/null
-	stty -raw
-	stty echo
-	stty $SAVEDSTTY
+white(){
+    echo -e "\033[1;37m\033[01m$1\033[0m"
 }
+
+bblue(){
+    echo -e "\033[1;34m\033[01m$1\033[0m"
+}
+
+rred(){
+    echo -e "\033[1;35m\033[01m$1\033[0m"
+}
+
 
 	if [[ -f /etc/redhat-release ]]; then
 		release="Centos"
@@ -45,77 +47,203 @@ bit=`uname -m`
 version=`uname -r | awk -F "-" '{print $1}'`
 main=`uname  -r | awk -F . '{print $1 }'`
 minor=`uname -r | awk -F . '{print $2}'`
-rv4=`ip -4 a | grep inet | grep -v 127.0.0 | awk '{print $2}' | cut -d'/' -f1`
+rv4=`ip a | grep 'brd' | awk 'NR==3 {print $2}' | cut -d'/' -f1`
 rv6=`ip a | grep inet6 | awk 'NR==2 {print $2}' | cut -d'/' -f1`
+op=`hostnamectl | grep -i Operating | awk -F ':' '{print $2}'`
+vi=`hostnamectl | grep -i Virtualization | awk -F ':' '{print $2}'`
 
+if [[ ${vi} == " kvm" ]]; then
+green " ---VPS扫描中---> "
 
-yellow " 安装相关依赖："
-if [ $release = "Centos" ]
- then
-yum update -y
-yum install curl wget -y && yum install sudo -y
-yum install virt-what
+elif [[ ${vi} == " xen" ]]; then
+green " ---VPS扫描中---> "
 
-virt=`virt-what`
-if [[ ${virt} == "kvm" ]]; then
-echo "ok"
+elif [[ ${vi} == " microsoft" ]]; then
+green " ---VPS扫描中---> "
+
 else
-yellow " 虚拟架构类型 - $virt "
-yellow " 此vps并非kvm架构，脚本安装自动退出！"
- exit 1
+yellow " 虚拟架构类型 - $vi "
+yellow " 对此vps架构不支持，脚本安装自动退出！"
+exit 1
 fi
-
- elif [ $release = "Debian" ]
- then
-apt-get update -y
-apt-get install curl wget -y && apt install sudo -y
-apt-get install virt-what
-
-virt=`virt-what`
-if [[ ${virt} == "kvm" ]]; then
-echo "ok"
-else
-yellow " 虚拟架构类型 - $virt "
-yellow " 此vps并非kvm架构，脚本安装自动退出！"
- exit 1
-fi
-
- elif [ $release = "Ubuntu" ]
- then
-apt-get update -y
-apt-get install curl wget -y &&  apt install sudo -y
-apt-get install virt-what
-
-virt=`virt-what`
-if [[ ${virt} == "kvm" ]]; then
-echo "ok"
-else
-yellow " 虚拟架构类型 - $virt "
-yellow " 此vps并非kvm架构，脚本安装自动退出！"
- exit 1
-fi
-
- else
-  yellow " 不支持当前系统 "
-  exit 1
- fi
-
-
-yellow " VPS小鸡内脏检测结果如下！："
-yellow "------------------------------------------"
-green " 操作系统名称 - $release "
-green " 系统内核版本 - $version " 
-green " CPU架构名称  - $bit "
-green " 虚拟架构类型 - $virt "
-green " -----------------------------------------------"
-blue " 本warp多功能脚本仅支持网络效能最高的-内-核-集-成-模式 "
-blue " 要求系统内核必须在5.6以上（脚本包含更新内核功能） "
-
-red " 对此无压力的请按：任意键继续。对此没兴趣的请按：Ctrl+C退出。 "
-char=$(get_char)
-
 
 if [[ ${bit} == "x86_64" ]]; then
+
+function wo646(){
+yellow " 检测系统内核版本是否大于5.6版本 "
+if [ "$main" -lt 5 ]|| [ "$minor" -lt 6 ]; then 
+	red " 检测到内核版本小于5.6，回到菜单，选择2，自动更新内核吧"
+	exit 1
+fi
+
+if [ $release = "Centos" ]
+	then
+	        yum update -y
+                yum install curl wget -y && yum install sudo -y
+		yum install epel-release -y		
+		yum install -y \
+                https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+                curl -o /etc/yum.repos.d/jdoss-wireguard-epel-7.repo \
+                https://copr.fedorainfracloud.org/coprs/jdoss/wireguard/repo/epel-7/jdoss-wireguard-epel-7.repo
+                yum install wireguard-tools -y
+	elif [ $release = "Debian" ]
+	then
+		apt-get update -y
+		apt-get install curl wget -y && apt install sudo -y
+		apt-get install openresolv -y
+		echo "deb http://deb.debian.org/debian/ unstable main" > /etc/apt/sources.list.d/unstable-wireguard.list
+		printf 'Package: *\nPin: release a=unstable\nPin-Priority: 150\n' > /etc/apt/preferences.d/limit-unstable
+		apt-get install linux-headers-`uname -r` -y
+		apt-get install wireguard-tools -y
+	elif [ $release = "Ubuntu" ]
+	then
+		apt-get update -y
+		apt-get install curl wget -y &&  apt install sudo -y
+		apt -y --no-install-recommends install openresolv dnsutils wireguard-tools
+	else
+		yellow " 不支持当前系统 "
+		exit 1
+	fi
+wget -N -6 https://cdn.jsdelivr.net/gh/YG-tsj/EUserv-warp/wgcf
+cp wgcf /usr/local/bin/wgcf
+sudo chmod +x /usr/local/bin/wgcf
+echo | wgcf register
+until [ $? -eq 0 ]
+do
+sleep 1s
+echo | wgcf register
+done
+wgcf generate
+sed -i "5 s/^/PostUp = ip -6 rule add from $rv6 table main\n/" wgcf-profile.conf
+sed -i "6 s/^/PostDown = ip -6 rule delete from $rv6 table main\n/" wgcf-profile.conf
+sed -i 's/engage.cloudflareclient.com/2606:4700:d0::a29f:c001/g' wgcf-profile.conf
+sed -i 's/1.1.1.1/9.9.9.9,8.8.8.8/g' wgcf-profile.conf
+cp wgcf-account.toml /etc/wireguard/wgcf-account.toml
+cp wgcf-profile.conf /etc/wireguard/wgcf.conf
+systemctl enable wg-quick@wgcf
+systemctl start wg-quick@wgcf
+rm -f wgcf*
+grep -qE '^[ ]*precedence[ ]*::ffff:0:0/96[ ]*100' /etc/gai.conf || echo 'precedence ::ffff:0:0/96  100' | sudo tee -a /etc/gai.conf
+yellow " 检测是否成功启动（IPV4+IPV6）双栈Warp！\n 显示IPV4地址：$(wget -qO- ipv4.ip.sb) 显示IPV6地址：$(wget -qO- ipv6.ip.sb) "
+green " 如上方显示IPV4地址：8.…………，IPV6地址：2a09:…………，则说明成功啦！\n 如上方IPV4无IP显示,IPV6显示本地IP,则说明失败喽！！ "
+}
+
+function wo66(){
+yellow " 检测系统内核版本是否大于5.6版本 "
+if [ "$main" -lt 5 ]|| [ "$minor" -lt 6 ]; then 
+	red " 检测到内核版本小于5.6，回到菜单，选择2，自动更新内核吧"
+	exit 1
+fi
+
+if [ $release = "Centos" ]
+	then
+	        yum update -y
+                yum install curl wget -y && yum install sudo -y
+		yum install epel-release -y		
+		yum install -y \
+                https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+                curl -o /etc/yum.repos.d/jdoss-wireguard-epel-7.repo \
+                https://copr.fedorainfracloud.org/coprs/jdoss/wireguard/repo/epel-7/jdoss-wireguard-epel-7.repo
+                yum install wireguard-tools -y
+	elif [ $release = "Debian" ]
+	then
+		apt-get update -y
+		apt-get install curl wget -y && apt install sudo -y
+		apt-get install openresolv -y
+		echo "deb http://deb.debian.org/debian/ unstable main" > /etc/apt/sources.list.d/unstable-wireguard.list
+		printf 'Package: *\nPin: release a=unstable\nPin-Priority: 150\n' > /etc/apt/preferences.d/limit-unstable
+		apt-get install linux-headers-`uname -r` -y
+		apt-get install wireguard-tools -y
+	elif [ $release = "Ubuntu" ]
+	then
+		apt-get update -y
+		apt-get install curl wget -y &&  apt install sudo -y
+		apt -y --no-install-recommends install openresolv dnsutils wireguard-tools
+	else
+		yellow " 不支持当前系统 "
+		exit 1
+	fi
+wget -N -6 https://cdn.jsdelivr.net/gh/YG-tsj/EUserv-warp/wgcf
+cp wgcf /usr/local/bin/wgcf
+sudo chmod +x /usr/local/bin/wgcf
+echo | wgcf register
+until [ $? -eq 0 ]
+do
+sleep 1s
+echo | wgcf register
+done
+wgcf generate
+sed -i "5 s/^/PostUp = ip -6 rule add from $rv6 table main\n/" wgcf-profile.conf
+sed -i "6 s/^/PostDown = ip -6 rule delete from $rv6 table main\n/" wgcf-profile.conf
+sed -i 's/engage.cloudflareclient.com/2606:4700:d0::a29f:c001/g' wgcf-profile.conf
+sed -i '/0\.0\.0\.0\/0/d' wgcf-profile.conf
+sed -i 's/1.1.1.1/9.9.9.9,8.8.8.8/g' wgcf-profile.conf
+cp wgcf-account.toml /etc/wireguard/wgcf-account.toml
+cp wgcf-profile.conf /etc/wireguard/wgcf.conf
+systemctl enable wg-quick@wgcf
+systemctl start wg-quick@wgcf
+rm -f wgcf*
+yellow " 检测是否成功启动Warp！\n 显示IPV6地址：$(wget -qO- ipv6.ip.sb) "
+green " 如上方显示IPV6地址：2a09:…………，则说明成功！\n 如上方无IP显示，则说明失败喽！ "
+}
+
+function wo64(){
+yellow " 检测系统内核版本是否大于5.6版本 "
+if [ "$main" -lt 5 ]|| [ "$minor" -lt 6 ]; then 
+	red " 检测到内核版本小于5.6，回到菜单，选择2，自动更新内核吧"
+	exit 1
+fi
+
+if [ $release = "Centos" ]
+	then
+	        yum update -y
+                yum install curl wget -y && yum install sudo -y
+		yum install epel-release -y		
+		yum install -y \
+                https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+                curl -o /etc/yum.repos.d/jdoss-wireguard-epel-7.repo \
+                https://copr.fedorainfracloud.org/coprs/jdoss/wireguard/repo/epel-7/jdoss-wireguard-epel-7.repo
+                yum install wireguard-tools -y
+	elif [ $release = "Debian" ]
+	then
+		apt-get update -y
+		apt-get install curl wget -y && apt install sudo -y
+		apt-get install openresolv -y
+		echo "deb http://deb.debian.org/debian/ unstable main" > /etc/apt/sources.list.d/unstable-wireguard.list
+		printf 'Package: *\nPin: release a=unstable\nPin-Priority: 150\n' > /etc/apt/preferences.d/limit-unstable
+		apt-get install linux-headers-`uname -r` -y
+		apt-get install wireguard-tools -y
+	elif [ $release = "Ubuntu" ]
+	then
+		apt-get update -y
+		apt-get install curl wget -y &&  apt install sudo -y
+		apt -y --no-install-recommends install openresolv dnsutils wireguard-tools
+	else
+		yellow " 不支持当前系统 "
+		exit 1
+	fi
+wget -N -6 https://cdn.jsdelivr.net/gh/YG-tsj/EUserv-warp/wgcf
+cp wgcf /usr/local/bin/wgcf
+sudo chmod +x /usr/local/bin/wgcf
+echo | wgcf register
+until [ $? -eq 0 ]
+do
+sleep 1s
+echo | wgcf register
+done
+wgcf generate
+sed -i 's/engage.cloudflareclient.com/2606:4700:d0::a29f:c001/g' wgcf-profile.conf
+sed -i '/\:\:\/0/d' wgcf-profile.conf
+sed -i 's/1.1.1.1/9.9.9.9,8.8.8.8/g' wgcf-profile.conf
+cp wgcf-account.toml /etc/wireguard/wgcf-account.toml
+cp wgcf-profile.conf /etc/wireguard/wgcf.conf
+systemctl enable wg-quick@wgcf
+systemctl start wg-quick@wgcf
+rm -f wgcf*
+grep -qE '^[ ]*precedence[ ]*::ffff:0:0/96[ ]*100' /etc/gai.conf || echo 'precedence ::ffff:0:0/96  100' | sudo tee -a /etc/gai.conf
+yellow " 检测是否成功启动Warp！\n 显示IPV4地址：$(wget -qO- ipv4.ip.sb) "
+green " 如上方显示IPV4地址：8.…………，则说明成功啦！\n 如上方显示VPS本地IP,则说明失败喽！ "
+}
 
 function warp6(){
 yellow " 检测系统内核版本是否大于5.6版本 "
@@ -126,6 +254,8 @@ fi
 
 if [ $release = "Centos" ]
 	then
+	        yum update -y
+                yum install curl wget -y && yum install sudo -y
 		yum install epel-release -y		
 		yum install -y \
                 https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
@@ -134,7 +264,8 @@ if [ $release = "Centos" ]
                 yum install wireguard-tools -y
 	elif [ $release = "Debian" ]
 	then
-		apt-get update
+		apt-get update -y
+		apt-get install curl wget -y && apt install sudo -y
 		apt-get install openresolv -y
 		echo "deb http://deb.debian.org/debian/ unstable main" > /etc/apt/sources.list.d/unstable-wireguard.list
 		printf 'Package: *\nPin: release a=unstable\nPin-Priority: 150\n' > /etc/apt/preferences.d/limit-unstable
@@ -142,7 +273,8 @@ if [ $release = "Centos" ]
 		apt-get install wireguard-tools -y
 	elif [ $release = "Ubuntu" ]
 	then
-		apt-get update
+		apt-get update -y
+		apt-get install curl wget -y &&  apt install sudo -y
 		apt -y --no-install-recommends install openresolv dnsutils wireguard-tools
 	else
 		yellow " 不支持当前系统 "
@@ -151,6 +283,11 @@ if [ $release = "Centos" ]
 wget -N https://github.com/ViRb3/wgcf/releases/download/v2.2.3/wgcf_2.2.3_linux_amd64 -O /usr/local/bin/wgcf
 sudo chmod +x /usr/local/bin/wgcf
 echo | wgcf register
+until [ $? -eq 0 ]
+do
+sleep 1s
+echo | wgcf register
+done
 wgcf generate
 sudo sed -i 's/engage.cloudflareclient.com/162.159.192.1/g' wgcf-profile.conf
 sudo sed -i '/0\.0\.0\.0\/0/d' wgcf-profile.conf
@@ -161,7 +298,7 @@ systemctl enable wg-quick@wgcf
 systemctl start wg-quick@wgcf
 rm -f wgcf*
 yellow " 检测是否成功启动Warp！\n 显示IPV6地址：$(wget -qO- ipv6.ip.sb) "
-green " 如上方显示IPV6地址：2a09:…………，则说明成功啦！\n 如上方无IP显示,（说明申请WGCF账户失败），请继续运行该脚本吧，直到成功为止！！！ "
+green " 如上方显示IPV6地址：2a09:…………，则说明成功！\n 如上方无IP显示，则说明失败喽！ "
 }
 
 function warp64(){
@@ -173,6 +310,8 @@ fi
 
 if [ $release = "Centos" ]
 	then
+	        yum update -y
+                yum install curl wget -y && yum install sudo -y
 		yum install epel-release -y		
 		yum install -y \
                 https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
@@ -181,7 +320,8 @@ if [ $release = "Centos" ]
                 yum install wireguard-tools -y
 	elif [ $release = "Debian" ]
 	then
-		apt-get update
+		apt-get update -y
+		apt-get install curl wget -y && apt install sudo -y
 		apt-get install openresolv -y
 		echo "deb http://deb.debian.org/debian/ unstable main" > /etc/apt/sources.list.d/unstable-wireguard.list
 		printf 'Package: *\nPin: release a=unstable\nPin-Priority: 150\n' > /etc/apt/preferences.d/limit-unstable
@@ -189,7 +329,8 @@ if [ $release = "Centos" ]
 		apt-get install wireguard-tools -y
 	elif [ $release = "Ubuntu" ]
 	then
-		apt-get update
+		apt-get update -y
+		apt-get install curl wget -y &&  apt install sudo -y
 		apt -y --no-install-recommends install openresolv dnsutils wireguard-tools
 	else
 		yellow " 不支持当前系统 "
@@ -198,6 +339,11 @@ if [ $release = "Centos" ]
 wget -N https://github.com/ViRb3/wgcf/releases/download/v2.2.3/wgcf_2.2.3_linux_amd64 -O /usr/local/bin/wgcf
 chmod +x /usr/local/bin/wgcf
 echo | wgcf register
+until [ $? -eq 0 ]
+do
+sleep 1s
+echo | wgcf register
+done
 wgcf generate
 sed -i "5 s/^/PostUp = ip -4 rule add from $rv4 table main\n/" wgcf-profile.conf
 sed -i "6 s/^/PostDown = ip -4 rule delete from $rv4 table main\n/" wgcf-profile.conf
@@ -209,7 +355,7 @@ systemctl enable wg-quick@wgcf
 systemctl start wg-quick@wgcf
 rm -f wgcf*
 yellow " 检测是否成功启动（IPV4+IPV6）双栈Warp！\n 显示IPV4地址：$(wget -qO- ipv4.ip.sb) 显示IPV6地址：$(wget -qO- ipv6.ip.sb) "
-green " 如上方显示IPV4地址：8.…………，IPV6地址：2a09:…………，则说明成功啦！\n 如上方IPV4无IP显示,IPV6显示本地IP（说明申请WGCF账户失败），请继续运行该脚本吧，直到成功为止！！！ "
+green " 如上方显示IPV4地址：8.…………，IPV6地址：2a09:…………，则说明成功啦！\n 如上方IPV4无IP显示,IPV6显示本地IP，则说明失败喽！！ "
 }
 
 function warp4(){
@@ -221,6 +367,8 @@ fi
 
 if [ $release = "Centos" ]
 	then
+	        yum update -y
+                yum install curl wget -y && yum install sudo -y
 		yum install epel-release -y		
 		yum install -y \
                 https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
@@ -229,7 +377,8 @@ if [ $release = "Centos" ]
                 yum install wireguard-tools -y
 	elif [ $release = "Debian" ]
 	then
-		apt-get update
+		apt-get update -y
+		apt-get install curl wget -y && apt install sudo -y
 		apt-get install openresolv -y
 		echo "deb http://deb.debian.org/debian/ unstable main" > /etc/apt/sources.list.d/unstable-wireguard.list
 		printf 'Package: *\nPin: release a=unstable\nPin-Priority: 150\n' > /etc/apt/preferences.d/limit-unstable
@@ -237,7 +386,8 @@ if [ $release = "Centos" ]
 		apt-get install wireguard-tools -y
 	elif [ $release = "Ubuntu" ]
 	then
-		apt-get update
+		apt-get update -y
+		apt-get install curl wget -y &&  apt install sudo -y
 		apt -y --no-install-recommends install openresolv dnsutils wireguard-tools
 	else
 		yellow " 不支持当前系统 "
@@ -246,6 +396,11 @@ if [ $release = "Centos" ]
 wget -N https://github.com/ViRb3/wgcf/releases/download/v2.2.3/wgcf_2.2.3_linux_amd64 -O /usr/local/bin/wgcf
 chmod +x /usr/local/bin/wgcf
 echo | wgcf register
+until [ $? -eq 0 ]
+do
+sleep 1s
+echo | wgcf register
+done
 wgcf generate
 sed -i "5 s/^/PostUp = ip -4 rule add from $rv4 table main\n/" wgcf-profile.conf
 sed -i "6 s/^/PostDown = ip -4 rule delete from $rv4 table main\n/" wgcf-profile.conf
@@ -258,7 +413,7 @@ systemctl enable wg-quick@wgcf
 systemctl start wg-quick@wgcf
 rm -f wgcf*
 yellow " 检测是否成功启动Warp！\n 显示IPV4地址：$(wget -qO- ipv4.ip.sb) "
-green " 如上方显示IPV4地址：8.…………，则说明成功啦！\n 如上方显示VPS本地IP,（说明申请WGCF账户失败），请继续运行该脚本吧，直到成功为止！！！ "
+green " 如上方显示IPV4地址：8.…………，则说明成功啦！\n 如上方显示VPS本地IP,则说明失败喽！ "
 }
 
 function warp466(){
@@ -270,6 +425,8 @@ fi
 
 if [ $release = "Centos" ]
 	then
+	        yum update -y
+                yum install curl wget -y && yum install sudo -y
 		yum install epel-release -y		
 		yum install -y \
                 https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
@@ -278,7 +435,8 @@ if [ $release = "Centos" ]
                 yum install wireguard-tools -y
 	elif [ $release = "Debian" ]
 	then
-		apt-get update
+		apt-get update -y
+		apt-get install curl wget -y && apt install sudo -y
 		apt-get install openresolv -y
 		echo "deb http://deb.debian.org/debian/ unstable main" > /etc/apt/sources.list.d/unstable-wireguard.list
 		printf 'Package: *\nPin: release a=unstable\nPin-Priority: 150\n' > /etc/apt/preferences.d/limit-unstable
@@ -286,7 +444,8 @@ if [ $release = "Centos" ]
 		apt-get install wireguard-tools -y
 	elif [ $release = "Ubuntu" ]
 	then
-		apt-get update
+		apt-get update -y
+		apt-get install curl wget -y &&  apt install sudo -y
 		apt -y --no-install-recommends install openresolv dnsutils wireguard-tools
 	else
 		yellow " 不支持当前系统 "
@@ -295,6 +454,11 @@ if [ $release = "Centos" ]
 wget -N https://github.com/ViRb3/wgcf/releases/download/v2.2.3/wgcf_2.2.3_linux_amd64 -O /usr/local/bin/wgcf
 chmod +x /usr/local/bin/wgcf
 echo | wgcf register
+until [ $? -eq 0 ]
+do
+sleep 1s
+echo | wgcf register
+done
 wgcf generate
 sed -i "5 s/^/PostUp = ip -6 rule add from $rv6 table main\n/" wgcf-profile.conf
 sed -i "6 s/^/PostDown = ip -6 rule delete from $rv6 table main\n/" wgcf-profile.conf
@@ -306,7 +470,7 @@ systemctl enable wg-quick@wgcf
 systemctl start wg-quick@wgcf
 rm -f wgcf*
 yellow " 检测是否成功启动Warp！\n 显示IPV6地址：$(wget -qO- ipv6.ip.sb) "
-green " 如上方显示IPV6地址：2a09:…………，则说明成功啦！\n 如上方无IP显示,（说明申请WGCF账户失败），请继续运行该脚本吧，直到成功为止！！！ "
+green " 如上方显示IPV6地址：2a09:…………，则说明成功啦！\n 如上方无IP显示,则说明失败喽！ "
 }
 
 function warp4646(){
@@ -318,6 +482,8 @@ fi
 
 if [ $release = "Centos" ]
 	then
+	        yum update -y
+                yum install curl wget -y && yum install sudo -y
 		yum install epel-release -y		
 		yum install -y \
                 https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
@@ -326,7 +492,8 @@ if [ $release = "Centos" ]
                 yum install wireguard-tools -y
 	elif [ $release = "Debian" ]
 	then
-		apt-get update
+		apt-get update -y
+		apt-get install curl wget -y && apt install sudo -y
 		apt-get install openresolv -y
 		echo "deb http://deb.debian.org/debian/ unstable main" > /etc/apt/sources.list.d/unstable-wireguard.list
 		printf 'Package: *\nPin: release a=unstable\nPin-Priority: 150\n' > /etc/apt/preferences.d/limit-unstable
@@ -334,7 +501,8 @@ if [ $release = "Centos" ]
 		apt-get install wireguard-tools -y
 	elif [ $release = "Ubuntu" ]
 	then
-		apt-get update
+		apt-get update -y
+		apt-get install curl wget -y &&  apt install sudo -y
 		apt -y --no-install-recommends install openresolv dnsutils wireguard-tools
 	else
 		yellow " 不支持当前系统 "
@@ -343,6 +511,11 @@ if [ $release = "Centos" ]
 wget -N https://github.com/ViRb3/wgcf/releases/download/v2.2.3/wgcf_2.2.3_linux_amd64 -O /usr/local/bin/wgcf
 chmod +x /usr/local/bin/wgcf
 echo | wgcf register
+until [ $? -eq 0 ]
+do
+sleep 1s
+echo | wgcf register
+done
 wgcf generate
 sed -i "5 s/^/PostUp = ip -4 rule add from $rv4 table main\n/" wgcf-profile.conf
 sed -i "6 s/^/PostDown = ip -4 rule delete from $rv4 table main\n/" wgcf-profile.conf
@@ -355,7 +528,7 @@ systemctl enable wg-quick@wgcf
 systemctl start wg-quick@wgcf
 rm -f wgcf*
 yellow " 检测是否成功启动（IPV4+IPV6）双栈Warp！\n 显示IPV4地址：$(wget -qO- ipv4.ip.sb) 显示IPV6地址：$(wget -qO- ipv6.ip.sb) "
-green " 如上方显示IPV4地址：8.…………，IPV6地址：2a09:…………，则说明成功啦！\n 如上方IPV4无IP显示,IPV6显示本地IP（说明申请WGCF账户失败），请继续运行该脚本吧，直到成功为止！！！ "
+green " 如上方显示IPV4地址：8.…………，IPV6地址：2a09:…………，则说明成功啦！\n 如上方IPV4无IP显示,IPV6显示本地IP，则说明失败喽！ "
 }
 
 function warp464(){
@@ -367,6 +540,8 @@ fi
 
 if [ $release = "Centos" ]
 	then
+	        yum update -y
+                yum install curl wget -y && yum install sudo -y
 		yum install epel-release -y		
 		yum install -y \
                 https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
@@ -375,7 +550,8 @@ if [ $release = "Centos" ]
                 yum install wireguard-tools -y
 	elif [ $release = "Debian" ]
 	then
-		apt-get update
+		apt-get update -y
+		apt-get install curl wget -y && apt install sudo -y
 		apt-get install openresolv -y
 		echo "deb http://deb.debian.org/debian/ unstable main" > /etc/apt/sources.list.d/unstable-wireguard.list
 		printf 'Package: *\nPin: release a=unstable\nPin-Priority: 150\n' > /etc/apt/preferences.d/limit-unstable
@@ -383,7 +559,8 @@ if [ $release = "Centos" ]
 		apt-get install wireguard-tools -y
 	elif [ $release = "Ubuntu" ]
 	then
-		apt-get update
+		apt-get update -y
+		apt-get install curl wget -y &&  apt install sudo -y
 		apt -y --no-install-recommends install openresolv dnsutils wireguard-tools
 	else
 		yellow " 不支持当前系统 "
@@ -392,6 +569,11 @@ if [ $release = "Centos" ]
 wget -N https://github.com/ViRb3/wgcf/releases/download/v2.2.3/wgcf_2.2.3_linux_amd64 -O /usr/local/bin/wgcf
 chmod +x /usr/local/bin/wgcf
 echo | wgcf register
+until [ $? -eq 0 ]
+do
+sleep 1s
+echo | wgcf register
+done
 wgcf generate
 sed -i "5 s/^/PostUp = ip -4 rule add from $rv4 table main\n/" wgcf-profile.conf
 sed -i "6 s/^/PostDown = ip -4 rule delete from $rv4 table main\n/" wgcf-profile.conf
@@ -403,11 +585,11 @@ systemctl enable wg-quick@wgcf
 systemctl start wg-quick@wgcf
 rm -f wgcf*
 yellow " 检测是否成功启动Warp！\n 显示IPV4地址：$(wget -qO- ipv4.ip.sb) "
-green " 如上方显示IPV4地址：8.…………，则说明成功啦！\n 如上方显示VPS本地IP,（说明申请WGCF账户失败），请继续运行该脚本吧，直到成功为止！！！ "
+green " 如上方显示IPV4地址：8.…………，则说明成功啦！\n 如上方显示VPS本地IP,则说明失败喽！ "
 }
 
 function upcore(){
-wget -N --no-check-certificate https://raw.githubusercontent.com/YG-tsj/Pro-warp/main/upcore.sh&& chmod +x upcore.sh && ./upcore.sh
+wget -N --no-check-certificate https://raw.githubusercontent.com/YG-tsj/CFWarp-Pro/main/upcore.sh&& chmod +x upcore.sh && ./upcore.sh
 }
 
 function iptables(){
@@ -420,7 +602,10 @@ sudo reboot
 }
 
 function BBR(){
-wget --no-check-certificate https://github.com/teddysun/across/raw/master/bbr.sh && chmod +x bbr.sh && ./bbr.sh
+echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf
+echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf
+sysctl -p
+lsmod | grep bbr
 }
 
 function cwarp(){
@@ -434,27 +619,39 @@ systemctl start wg-quick@wgcf
 }
 
 function macka(){
+sudo iptables -P INPUT ACCEPT
+sudo iptables -P FORWARD ACCEPT
+sudo iptables -P OUTPUT ACCEPT
+sudo iptables -F
 wget -P /root -N --no-check-certificate "https://raw.githubusercontent.com/mack-a/v2ray-agent/master/install.sh" && chmod 700 /root/install.sh && /root/install.sh
 }
 
 function phlinhng(){
+sudo iptables -P INPUT ACCEPT
+sudo iptables -P FORWARD ACCEPT
+sudo iptables -P OUTPUT ACCEPT
+sudo iptables -F
 curl -fsSL https://raw.staticdn.net/phlinhng/v2ray-tcp-tls-web/main/src/xwall.sh -o ~/xwall.sh && bash ~/xwall.sh
 }
 
 function cv46(){
         yellow "开始检测IPV4地址"
 	v4=`wget -qO- ipv4.ip.sb`
-	if [[ -z $v4 ]]; then
-		red " VPS当前检测不到IPV4地址 "
+	pingv4=$(ping -c 1 www.google.com| sed '2{s/[^(]*(//;s/).*//;q;}' | tail -n +2) 
+        if [[ -z "${pingv4}" ]]; then 
+        red " ---> VPS当前检测不到IPV4地址 " 
 	else
-		green " VPS当前正使用的IPV4地址: $v4 "
+	green " VPS当前正使用的IPV4地址: $v4 "
 	fi
+	
+	
 	yellow "开始检测IPV6地址"
 	v6=`wget -qO- ipv6.ip.sb`
-	if [[ -z $v6 ]]; then
-		red " VPS当前检测不到IPV6地址 "
+	pingv6=$(ping6 -c 1 www.google.com| sed '2{s/[^(]*(//;s/).*//;q;}' | tail -n +2) 
+	if [[ -z "${pingv6}" ]]; then 
+        red " ---> VPS当前检测不到IPV6地址 " 
 	else
-		green " VPS当前正使用的IPV6地址: $v6 "
+	green " VPS当前正使用的IPV6地址: $v6 "
 	fi
 }
 
@@ -479,40 +676,48 @@ function status(){
 systemctl status wg-quick@wgcf
 }
 
-function up(){
-wget -N --no-check-certificate https://raw.githubusercontent.com/YG-tsj/Pro-warp/main/multi.sh && chmod +x multi.sh && ./multi.sh
+function up6(){
+echo -e nameserver 2a00:1098:2c::1 > /etc/resolv.conf
+wget -6 -N --no-check-certificate https://cdn.jsdelivr.net/gh/YG-tsj/CFWarp-Pro/multi.sh && chmod +x multi.sh && ./multi.sh
+}
+
+function up4(){
+wget -N --no-check-certificate https://cdn.jsdelivr.net/gh/YG-tsj/CFWarp-Pro/multi.sh && chmod +x multi.sh && ./multi.sh
 }
 
 #主菜单
 function start_menu(){
     clear
-    red " 详细说明 https://github.com/YG-tsj/Oracle-warp  YouTube频道：甬哥探世界 " 
+    yellow " VPS相关信息如下："
+    white "------------------------------------------"
+    blue " 操作系统名称 -$op "
+    blue " 系统内核版本 - $version " 
+    blue " CPU架构名称  - $bit "
+    blue " 虚拟架构类型 -$vi "
+    white " -----------------------------------------------" 
+    yellow " 详细说明 https://github.com/YG-tsj/CFWarp-Pro  YouTube频道：甬哥探世界 " 
     
-    red " 围绕WARP功能的脚本，支持KVM X86架构的Ubuntu/Centos/Debain最新系统 "  
+    red " 切记：进入脚本快捷方式 bash multi.sh "
     
-    red " ==============================================================================================" 
+    white " ==========================一、VPS状态调整选择（更新中）==========================================" 
     
-    yellow " 切记：进入脚本快捷方式 bash ~/multi.sh "
+    green " 1. 永久开启甲骨文VPS的ubuntu系统所有端口（甲骨文云用户建议选择！！） "
     
-    blue " ==========================一、VPS状态调整选择（更新中）==========================================" 
+    green " 2. 更新系统内核 "
     
-    blue " 1. 开启甲骨文VPS的ubuntu系统所有端口。自动断连后，请重新连接SSH（甲骨文云用户建议选择！！） "
+    green " 3. 开启原生BBR加速 "
     
-    blue " 2. 更新系统内核 "
+    green " 4. 检测奈飞Netflix是否解锁 "
     
-    blue " 3. 开启原生BBR加速 "
+    white " =========================二、WARP功能选择（更新中）=============================================="
     
-    blue " 4. 检测奈飞Netflix是否解锁 "
+    yellow " ----VPS原生IP数------------------------------------添加WARP虚拟IP的位置--------------"
     
-    green " =========================二、WARP功能选择（更新中）=============================================="
+    green " 5. 纯IPV4的VPS。                                   添加WARP虚拟IPV6               "
     
-    green " ----VPS原生IP数------------------------------------添加WARP虚拟IP的位置--------------"
+    green " 6. 纯IPV4的VPS。                                   添加WARP虚拟IPV4+虚拟IPV6      "
     
-    green " 5. 单IPV4的VPS。                                   添加WARP虚拟IPV6               "
-    
-    green " 6. 单IPV4的VPS。                                   添加WARP虚拟IPV4+虚拟IPV6      "
-    
-    green " 7. 单IPV4的VPS。                                   添加WARP虚拟IPV4              "
+    green " 7. 纯IPV4的VPS。                                   添加WARP虚拟IPV4              "
     
     green " 8. 双栈IPV4+IPV6的VPS。                            添加WARP虚拟IPV6               "
     
@@ -520,31 +725,41 @@ function start_menu(){
     
     green " 10. 双栈IPV4+IPV6的VPS。                           添加WARP虚拟IPV4               "
     
-    green " ------------------------------------------------------------------------------------------------"
+    green " 11. 纯IPV6的VPS。                                  添加WARP虚拟IPV6               "
     
-    green " 11. 永久关闭WARP功能 "
+    green " 12. 纯IPV6的VPS。                                  添加WARP虚拟IPV4+虚拟IPV6       "
     
-    green " 12. 自动开启WARP功能 "
+    green " 13. 纯IPV6的VPS。                                  添加WARP虚拟IPV4               "
     
-    green " 13. 查看当前WARP运行状态 "
+    white " ------------------------------------------------------------------------------------------------"
     
-    green " 14. 查看VPS当前正在使用的IPV4/IPV6地址 "
+    green " 14. 永久关闭WARP功能 "
     
-    green " 15. 更新脚本 "
+    green " 15. 自动开启WARP功能 "
     
-    yellow " ========================三、代理协议脚本选择（更新中）==========================================="
+    green " 16. 查看当前WARP运行状态 "
     
-    yellow " 16.使用mack-a脚本（支持Xray, V2ray, Trojan-go） "
+    green " 17. 查看VPS当前正在使用的IPV4/IPV6地址 "
     
-    yellow " 17.使用phlinhng脚本（支持Xray, Trojan-go, SS+v2ray-plugin） "
+    green " 18. 纯V6下更新脚本 "
     
-    yellow " ==============================================================================================="
+    green " 19. 纯V4/V4+V6下更新脚本 "
     
-    red " 18. 重启VPS实例，请重新连接SSH "
+    white " ========================三、代理协议脚本选择（更新中）==========================================="
     
-    red " ==================================================================================================" 
+    yellow " 以下脚本已添加全端口临时开启功能，重启VPS实例可自动还原初始设置 "
     
-    red " 0. 退出脚本 "
+    green " 19.使用mack-a脚本（支持Xray, V2ray, Trojan-go） "
+    
+    green " 20.使用phlinhng脚本（支持Xray, Trojan-go, SS+v2ray-plugin） "
+    
+    white " ==============================================================================================="
+    
+    green " 21. 重启VPS实例，请重新连接SSH "
+    
+    white " ==================================================================================================" 
+    
+    green " 0. 退出脚本 "
     echo
     read -p "请输入数字:" menuNumberInput
     case "$menuNumberInput" in
@@ -579,27 +794,39 @@ function start_menu(){
            warp464
 	;;
 	11 )
-           cwarp
+           wo66
 	;;
 	12 )
-           owarp
+           wo646
 	;;
 	13 )
-           status
+           wo64
 	;;
 	14 )
-           cv46
+           cwarp
 	;;
 	15 )
-           up
+           owarp
 	;;
 	16 )
-           macka
+           status
 	;;
 	17 )
-           phlinhng
+           cv46
 	;;
 	18 )
+           up6
+	;;
+	19 )
+           up4
+	;;
+	20 )
+           macka
+	;;
+	21 )
+           phlinhng
+	;;
+	22 )
            reboot
 	;;
         0 )
@@ -621,10 +848,15 @@ fi
 
 apt update
 apt -y --no-install-recommends install openresolv dnsutils wireguard-tools
-wget -N https://github.com/YG-tsj/Oracle-warp/raw/main/wgcf
+wget -N https://github.com/YG-tsj/CFWarp-Pro/raw/main/wgcf
 cp wgcf /usr/local/bin/wgcf
 chmod +x /usr/local/bin/wgcf
 echo | wgcf register
+until [ $? -eq 0 ]
+do
+sleep 1s
+echo | wgcf register
+done
 wgcf generate
 sed -i 's/engage.cloudflareclient.com/162.159.192.1/g' wgcf-profile.conf
 sed -i '/0\.0\.0\.0\/0/d' wgcf-profile.conf
@@ -635,7 +867,7 @@ systemctl enable wg-quick@wgcf
 systemctl start wg-quick@wgcf
 rm -f wgcf*
 yellow " 检测是否成功启动Warp！\n 显示IPV6地址：$(wget -qO- ipv6.ip.sb) "
-green " 如上方显示IPV6地址：2a09:…………，则说明成功啦！\n 如上方无IP显示,（说明申请WGCF账户失败），请继续运行该脚本吧，直到成功为止！！！ "
+green " 如上方显示IPV6地址：2a09:…………，则说明成功啦！\n 如上方无IP显示,则说明失败喽！ "
 }
 
 function warp64(){
@@ -646,10 +878,15 @@ fi
 
 apt update
 apt -y --no-install-recommends install openresolv dnsutils wireguard-tools
-wget -N https://github.com/YG-tsj/Oracle-warp/raw/main/wgcf
+wget -N https://github.com/YG-tsj/CFWarp-Pro/raw/main/wgcf
 cp wgcf /usr/local/bin/wgcf
 chmod +x /usr/local/bin/wgcf
 echo | wgcf register
+until [ $? -eq 0 ]
+do
+sleep 1s
+echo | wgcf register
+done
 wgcf generate
 sed -i "5 s/^/PostUp = ip -4 rule add from $rv4 table main\n/" wgcf-profile.conf
 sed -i "6 s/^/PostDown = ip -4 rule delete from $rv4 table main\n/" wgcf-profile.conf
@@ -661,7 +898,7 @@ systemctl enable wg-quick@wgcf
 systemctl start wg-quick@wgcf
 rm -f wgcf*
 yellow " 检测是否成功启动（IPV4+IPV6）双栈Warp！\n 显示IPV4地址：$(wget -qO- ipv4.ip.sb) 显示IPV6地址：$(wget -qO- ipv6.ip.sb) "
-green " 如上方显示IPV4地址：8.…………，IPV6地址：2a09:…………，则说明成功啦！\n 如上方IPV4无IP显示,IPV6显示本地IP（说明申请WGCF账户失败），请继续运行该脚本吧，直到成功为止！！！ "
+green " 如上方显示IPV4地址：8.…………，IPV6地址：2a09:…………，则说明成功啦！\n 如上方IPV4无IP显示,IPV6显示本地IP，则说明失败喽！ "
 }
 
 function warp4(){
@@ -672,10 +909,15 @@ fi
 
 apt update
 apt -y --no-install-recommends install openresolv dnsutils wireguard-tools
-wget -N https://github.com/YG-tsj/Oracle-warp/raw/main/wgcf
+wget -N https://github.com/YG-tsj/CFWarp-Pro/raw/main/wgcf
 cp wgcf /usr/local/bin/wgcf
 chmod +x /usr/local/bin/wgcf
 echo | wgcf register
+until [ $? -eq 0 ]
+do
+sleep 1s
+echo | wgcf register
+done
 wgcf generate
 sed -i "5 s/^/PostUp = ip -4 rule add from $rv4 table main\n/" wgcf-profile.conf
 sed -i "6 s/^/PostDown = ip -4 rule delete from $rv4 table main\n/" wgcf-profile.conf
@@ -688,7 +930,7 @@ systemctl enable wg-quick@wgcf
 systemctl start wg-quick@wgcf
 rm -f wgcf*
 yellow " 检测是否成功启动Warp！\n 显示IPV4地址：$(wget -qO- ipv4.ip.sb) "
-green " 如上方显示IPV4地址：8.…………，则说明成功啦！\n 如上方显示VPS本地IP,（说明申请WGCF账户失败），请继续运行该脚本吧，直到成功为止！！！ "
+green " 如上方显示IPV4地址：8.…………，则说明成功啦！\n 如上方显示VPS本地IP,则说明失败喽！ "
 }
 
 function warp466(){
@@ -699,10 +941,15 @@ fi
 
 apt update
 apt -y --no-install-recommends install openresolv dnsutils wireguard-tools
-wget -N https://github.com/YG-tsj/Oracle-warp/raw/main/wgcf
+wget -N https://github.com/YG-tsj/CFWarp-Pro/raw/main/wgcf
 cp wgcf /usr/local/bin/wgcf
 chmod +x /usr/local/bin/wgcf
 echo | wgcf register
+until [ $? -eq 0 ]
+do
+sleep 1s
+echo | wgcf register
+done
 wgcf generate
 sed -i "5 s/^/PostUp = ip -6 rule add from $rv6 table main\n/" wgcf-profile.conf
 sed -i "6 s/^/PostDown = ip -6 rule delete from $rv6 table main\n/" wgcf-profile.conf
@@ -714,7 +961,7 @@ systemctl enable wg-quick@wgcf
 systemctl start wg-quick@wgcf
 rm -f wgcf*
 yellow " 检测是否成功启动Warp！\n 显示IPV6地址：$(wget -qO- ipv6.ip.sb) "
-green " 如上方显示IPV6地址：2a09:…………，则说明成功啦！\n 如上方无IP显示,（说明申请WGCF账户失败），请继续运行该脚本吧，直到成功为止！！！ "
+green " 如上方显示IPV6地址：2a09:…………，则说明成功啦！\n 如上方无IP显示,则说明失败喽！ "
 }
 
 function warp4646(){
@@ -725,10 +972,15 @@ fi
 
 apt update
 apt -y --no-install-recommends install openresolv dnsutils wireguard-tools
-wget -N https://github.com/YG-tsj/Oracle-warp/raw/main/wgcf
+wget -N https://github.com/YG-tsj/CFWarp-Pro/raw/main/wgcf
 cp wgcf /usr/local/bin/wgcf
 chmod +x /usr/local/bin/wgcf
 echo | wgcf register
+until [ $? -eq 0 ]
+do
+sleep 1s
+echo | wgcf register
+done
 wgcf generate
 sed -i "5 s/^/PostUp = ip -4 rule add from $rv4 table main\n/" wgcf-profile.conf
 sed -i "6 s/^/PostDown = ip -4 rule delete from $rv4 table main\n/" wgcf-profile.conf
@@ -741,7 +993,7 @@ systemctl enable wg-quick@wgcf
 systemctl start wg-quick@wgcf
 rm -f wgcf*
 yellow " 检测是否成功启动（IPV4+IPV6）双栈Warp！\n 显示IPV4地址：$(wget -qO- ipv4.ip.sb) 显示IPV6地址：$(wget -qO- ipv6.ip.sb) "
-green " 如上方显示IPV4地址：8.…………，IPV6地址：2a09:…………，则说明成功啦！\n 如上方IPV4无IP显示,IPV6显示本地IP（说明申请WGCF账户失败），请继续运行该脚本吧，直到成功为止！！！ "
+green " 如上方显示IPV4地址：8.…………，IPV6地址：2a09:…………，则说明成功啦！\n 如上方IPV4无IP显示,IPV6显示本地IP，则说明失败喽！ "
 }
 
 function warp464(){
@@ -752,10 +1004,15 @@ fi
 
 apt update
 apt -y --no-install-recommends install openresolv dnsutils wireguard-tools
-wget -N https://github.com/YG-tsj/Oracle-warp/raw/main/wgcf
+wget -N https://github.com/YG-tsj/CFWarp-Pro/raw/main/wgcf
 cp wgcf /usr/local/bin/wgcf
 chmod +x /usr/local/bin/wgcf
 echo | wgcf register
+until [ $? -eq 0 ]
+do
+sleep 1s
+echo | wgcf register
+done
 wgcf generate
 sed -i "5 s/^/PostUp = ip -4 rule add from $rv4 table main\n/" wgcf-profile.conf
 sed -i "6 s/^/PostDown = ip -4 rule delete from $rv4 table main\n/" wgcf-profile.conf
@@ -767,7 +1024,7 @@ systemctl enable wg-quick@wgcf
 systemctl start wg-quick@wgcf
 rm -f wgcf*
 yellow " 检测是否成功启动Warp！\n 显示IPV4地址：$(wget -qO- ipv4.ip.sb) "
-green " 如上方显示IPV4地址：8.…………，则说明成功啦！\n 如上方显示VPS本地IP,（说明申请WGCF账户失败），请继续运行该脚本吧，直到成功为止！！！ "
+green " 如上方显示IPV4地址：8.…………，则说明成功啦！\n 如上方显示VPS本地IP,则说明失败喽！ "
 }
 
 
@@ -781,7 +1038,10 @@ sudo reboot
 }
 
 function BBR(){
-wget --no-check-certificate https://github.com/teddysun/across/raw/master/bbr.sh && chmod +x bbr.sh && ./bbr.sh
+echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf
+echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf
+sysctl -p
+lsmod | grep bbr
 }
 
 function cwarp(){
@@ -795,10 +1055,18 @@ systemctl start wg-quick@wgcf
 }
 
 function macka(){
+sudo iptables -P INPUT ACCEPT
+sudo iptables -P FORWARD ACCEPT
+sudo iptables -P OUTPUT ACCEPT
+sudo iptables -F
 wget -P /root -N --no-check-certificate "https://raw.githubusercontent.com/mack-a/v2ray-agent/master/install.sh" && chmod 700 /root/install.sh && /root/install.sh
 }
 
 function phlinhng(){
+sudo iptables -P INPUT ACCEPT
+sudo iptables -P FORWARD ACCEPT
+sudo iptables -P OUTPUT ACCEPT
+sudo iptables -F
 curl -fsSL https://raw.staticdn.net/phlinhng/v2ray-tcp-tls-web/main/src/xwall.sh -o ~/xwall.sh && bash ~/xwall.sh
 }
 
@@ -851,33 +1119,36 @@ systemctl status wg-quick@wgcf
 }
 
 function up(){
-wget -N --no-check-certificate https://raw.githubusercontent.com/YG-tsj/Pro-warp/main/multi.sh && chmod +x multi.sh && ./multi.sh
+wget -N --no-check-certificate https://raw.githubusercontent.com/YG-tsj/CFWarp-Pro/main/multi.sh && chmod +x multi.sh && ./multi.sh
 }
 
 #主菜单
 function start_menu(){
     clear
-    red " 详细说明 https://github.com/YG-tsj/Oracle-warp  YouTube频道：甬哥探世界 " 
+    yellow " VPS相关信息如下："
+    white "------------------------------------------"
+    blue " 操作系统名称 -$op "
+    blue " 系统内核版本 - $version " 
+    blue " CPU架构名称  - $bit "
+    blue " 虚拟架构类型 -$vi "
+    white " -----------------------------------------------" 
+    yellow " 详细说明 https://github.com/YG-tsj/CFWarp-Pro  YouTube频道：甬哥探世界 " 
     
-    red " 围绕WARP功能的脚本，目前仅支持甲骨文KVM ARM架构/Ubuntu 20.04系统，还在优化添加新功能中…… "  
+    red " 切记：进入脚本快捷方式 bash multi.sh "
     
-    red " ==============================================================================================" 
+    white " ==========================一、VPS状态调整选择（更新中）==========================================" 
     
-    yellow " 切记：进入脚本快捷方式bash ~/multi.sh "
+    green " 1. 永久开启甲骨文VPS的ubuntu系统所有端口（甲骨文云用户建议选择！！） "
     
-    blue " ==========================一、VPS状态调整选择（更新中）==========================================" 
+    green " 2. 更新ARM架构通用版内核至5.11版 "
     
-    blue " 1. 开启甲骨文VPS的ubuntu系统所有端口。自动断连后，请重新连接SSH（甲骨文云用户建议选择！！） "
+    green " 3. 开启原生BBR加速 "
     
-    blue " 2. 更新ARM架构通用版内核至5.11版。自动断连后，请重新连接SSH "
+    green " 4. 检测奈飞Netflix是否解锁 "
     
-    blue " 3. 开启原生BBR加速 "
+    white " =========================二、WARP功能选择（更新中）=============================================="
     
-    blue " 4. 检测奈飞Netflix是否解锁 "
-    
-    green " =========================二、WARP功能选择（更新中）=============================================="
-    
-    green " ----VPS原生IP数-------------------------------------添加WARP虚拟IP的位置----------"
+    white " ----VPS原生IP数-------------------------------------添加WARP虚拟IP的位置----------"
     
     green " 5. 纯IPV4的VPS。                                    添加WARP虚拟IPV6          "     
     
@@ -891,7 +1162,7 @@ function start_menu(){
     
     green " 10. 双栈IPV4+IPV6的VPS。                            添加WARP虚拟IPV4               "
     
-    green " ------------------------------------------------------------------------------------------------"
+    white " ------------------------------------------------------------------------------------------------"
     
     green " 11. 永久关闭WARP功能 "
     
@@ -903,17 +1174,19 @@ function start_menu(){
     
     green " 15. 更新脚本 "
     
-    yellow " ========================三、代理协议脚本选择（更新中）==========================================="
+    white " ========================三、代理协议脚本选择（更新中）==========================================="
     
-    yellow " 16.使用mack-a脚本（支持ARM架构VPS，支持协议：Xray, V2ray, Trojan-go） "
+    yellow " 以下脚本已添加全端口临时开启功能，重启VPS实例可还原初始设置 "
     
-    yellow " ==============================================================================================="
+    green " 16.使用mack-a脚本（支持ARM架构VPS，支持协议：Xray, V2ray, Trojan-go） "
     
-    red " 17. 重启VPS实例，请重新连接SSH "
+    white " ==============================================================================================="
     
-    red " ==================================================================================================" 
+    green " 17. 重启VPS实例，请重新连接SSH "
     
-    red " 0. 退出脚本 "
+    white " ==================================================================================================" 
+    
+    green " 0. 退出脚本 "
     echo
     read -p "请输入数字:" menuNumberInput
     case "$menuNumberInput" in

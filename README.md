@@ -1,32 +1,38 @@
 ## 编辑未完成，图片文字排版更新中。
 
-# 21.6.13：更新要点
+### 21.6.17更新要点：
 
-几乎推倒重建的更新！
+针对甲骨文云ubuntu系统，对代理脚本（例：mack-a脚本）加入全端口的临时开启，重启VPS实例自动还原初始设置！
+
+### 21.6.15更新要点：
+
+加入对Xen(亚马逊云Aws)与Microsoft(微软云Azure)架构的支持！
+
+### 21.6.14更新要点：
+
+优化安装逻辑（解决每次进脚本都要检验依赖问题），优化WGCF账户申请成功率！
+
+### 21.6.13更新要点：
 
 1、加入Centos/Debain系统的支持
 
-![712b6861802a55597e161caa59adc0a](https://user-images.githubusercontent.com/80431714/121798581-c4275600-cc59-11eb-97f5-fe7f8be7a9fd.png)
+2、自动识别系统，且无须手动输入IP地址
 
-![f9b35ccf3fd333c83e95ae6b660ddcb](https://user-images.githubusercontent.com/80431714/121798610-e7ea9c00-cc59-11eb-8774-e3d36aabd978.png)
+### 更新已测试通过的VPS名单
 
+ - [x] 已支持：oracle（甲骨文云），gpc（谷歌云），buyvm，racknerd，aws（亚马逊云），azure（微软云），bandwagonhost（搬瓦工）………………欢迎大家补充反馈………
+ 
+### 提醒：
 
-2、自动识别系统，无须手动输入专用IP与IPV6
+1、OpenVZ、LXC架构的VPS并不集成在此脚本中。
 
-3、内核更新独立选择
+2、内核必须5.6以上，脚本自带稳定版内核升级功能。
 
-![644a40002abdabac007fb10fc3a8c6e](https://user-images.githubusercontent.com/80431714/121798587-cc7f9100-cc59-11eb-981d-3e0e31f3b4b3.png)
-
-
-4、更智能得检测当前正使用哪个V4或V6地址
-
-![21cf70a6bd155b549b7839bddd0280e](https://user-images.githubusercontent.com/80431714/121798598-d4d7cc00-cc59-11eb-8add-1ccc6756ad13.png)
-
-
-### 更新已测试通过的VPS名单：oracle，buyvm，gpc………………,欢迎大家补充反馈，相关视频教程下期发布………
+#### OpenVZ、LXC架构VPS脚本:[EUserv 纯ipv6(OpenVZ、LXC架构VPS)WARP项目](https://github.com/YG-tsj/EUserv-warp)后续也将更新IPV4的相关支持。
 
 --------------------------------------------------------------------------------------------
 ## 针对KVM架构VPS的WARP一键综合脚本
+
 - [x] 支持自动识别X86与ARM的CPU架构
 - [x] 支持 纯IPV4  VPS
 - [x] 支持 IPV4+IPV6双栈VPS
@@ -35,7 +41,7 @@
 
 ![d89ed915a4e612e87946206873184a8](https://user-images.githubusercontent.com/80431714/121798546-9b9f5c00-cc59-11eb-8b6e-e3462ce7c6ec.png)
 
-### OpenVZ、LXC架构VPS脚本:[EUserv 纯ipv6(OpenVZ、LXC架构VPS)WARP项目](https://github.com/YG-tsj/EUserv-warp)后续也将更新。
+
 -----------------------------------------------------------------------------------------
 # 目录
 
@@ -66,13 +72,13 @@
 - **脚本一：适用于纯IPV4 VPS与IPV4+IPV6双栈VPS，非root状态下直接输入以下脚本（支持甲骨文与谷歌云）**
 
 ```
-bash <(curl -sSL https://raw.githubusercontent.com/YG-tsj/Pro-warp/main/root.sh)
+bash <(curl -sSL https://raw.githubusercontent.com/YG-tsj/CFWarp-Pro/main/root.sh)
 ```
 
 - **脚本二：适用于纯IPV6 VPS，先执行```sudo -i```进入root模式后再输入以下脚本（已集成永久DNS64）**
 
 ```
-echo -e nameserver 2a00:1098:2c::1 > /etc/resolv.conf && bash <(curl -sSL https://raw.githubusercontent.com/YG-tsj/Pro-warp/main/v6root.sh)
+echo -e nameserver 2a00:1098:2c::1 > /etc/resolv.conf && bash <(curl -sSL https://raw.githubusercontent.com/YG-tsj/CFWarp-Pro/main/v6root.sh)
 ```
 
 -----------------------------------------------------------------------------------------
@@ -128,20 +134,20 @@ echo -e nameserver 2a00:1098:2c::1 > /etc/resolv.conf && bash <(curl -sSL https:
 - **脚本一：支持X86/ARM架构的纯IPV4 VPS与IPV4+IPV6双栈VPS**
 
 ```
-wget -N --no-check-certificate https://raw.githubusercontent.com/YG-tsj/Pro-warp/main/multi.sh && chmod +x multi.sh && ./multi.sh
+wget -N --no-check-certificate https://cdn.jsdelivr.net/gh/YG-tsj/CFWarp-Pro/multi.sh && chmod +x multi.sh && ./multi.sh
 ```
 
-进入脚本快捷方式 ```bash ~/multi.sh```
+进入脚本快捷方式 ```bash multi.sh```
 
 ---------------------------------------------------------------------------------------------------
 - **脚本二：支持X86/ARM架构的纯IPV6 VPS**
 
 - 如未执行上面的root一键脚本，先执行```sudo -i```进入root模式，后执行```echo -e nameserver 2a00:1098:2c::1 > /etc/resolv.conf```
 ```
-wget -N --no-check-certificate https://raw.githubusercontent.com/YG-tsj/Pro-warp/main/multiOV6.sh && chmod +x multiOV6.sh && ./multiOV6.sh
+wget -N --no-check-certificate https://raw.githubusercontent.com/YG-tsj/CFWarp-Pro/main/multiOV6.sh && chmod +x multiOV6.sh && ./multiOV6.sh
 ```
 
-纯IPV6建议后续只用快捷方式进入脚本 ```bash ~/multiOV6.sh```
+纯IPV6建议后续只用快捷方式进入脚本 ```bash multiOV6.sh```
 
 ----------------------------------------------------------------------------------------
 
@@ -155,13 +161,15 @@ wget -N --no-check-certificate https://raw.githubusercontent.com/YG-tsj/Pro-warp
 
 因为5.6版本以上内核才集成Wireguard，内核集成方案在理论上网络效率最高！（网络性能：内核集成>内核模块>Wireguard-Go）
 
+而网络上很多项目大多都为“内核模块”方案。所以本项目就来pro版的，后续随着VPS厂商对系统的升级，内核集成必定是主流。
+
 自动检测内核版本功能已集成于5-10脚本中，5.6以下内核将自动终止脚本运行并提示升级内核！
 
 更新完成后将自动断开VPS连接！
 
-- **三、开启原生BBR加速（秋水逸冰版）：**
+- **三、开启原生BBR加速：**
 
-按任意键即可安装成功，检测BBR是否生效(显示有BBR，说明成功)：lsmod | grep bbr
+检测原生BBR是否生效，最后显示有tcp_bbr字样，说明成功。
 
 - **四、奈非Netflix检测(sjlleo版)：**
 
@@ -208,11 +216,19 @@ wget -N --no-check-certificate https://raw.githubusercontent.com/YG-tsj/Pro-warp
 
 因WARP脚本默认集成该功能，所以脚本安装成功后不必再执行该项。
 
-- **八、查看当前VPS的IPV4/IPV6地址：**
+- **八、查看warp当前的运行状态
+
+显示Active: active (exited)绿色：开启
+
+显示Active: inactive (dead)黑色：关闭
+
+显示Active：failed 红色：安装失败
+
+- **九、查看当前VPS的IPV4/IPV6地址：**
 
 顾名思义，当前正在运行的IP地址。
 
-- **九、代理协议脚本选择**
+- **十、代理协议脚本选择（为甲骨文云优化）**
 
 支持IPV4/IPV6/X86/ARM的全面脚本 ，推荐！
 mack-a脚本地址：https://github.com/mack-a/v2ray-agent
@@ -222,14 +238,15 @@ phlinhng脚本地址：https://github.com/phlinhng/v2ray-tcp-tls-web
 
 注意：域名解析所填写的IP必须是VPS本地IP，与WARP分配的IP没关系！
 
-- **十、重启VPS实例（俗话说：重启解决99%的问题）**
+- **十一、重启VPS实例（俗话说：重启解决99%的问题）**
  
 甲骨文云也可以登录网页，进入实例后台，执行“重新引导”，在后台重启。
 
 ------------------------------------------------------------------------------------------------------
 ### 自定义ip分流配置模板说明
 
-IPV4 VPS WARP专用分流配置文件(以下默认全局IPV4优先，IP、域名自定义教程，参考https://youtu.be/fY9HDLJ7mnM)
+分流配置文件：outbounds配置文件或者routing配置文件，让IP、域名自定义。大家可根据代理脚本作者说明来查找文件路径！
+
 ```
 { 
 "outbounds": [
@@ -262,6 +279,11 @@ IPV4 VPS WARP专用分流配置文件(以下默认全局IPV4优先，IP、域名
   }
 }
 ```
+
+outbounds：只改三处（三个数字）！！！以上是代理脚本默认为IPV4优先设置。如果IPV6优先，则把4改成6，6改成4。
+
+routing：设置自由度太高啦！可参考IP、域名自定义德鸡IPV6教程：https://youtu.be/fY9HDLJ7mnM)
+
 ----------------------------------------------------------------------------------------------
 
 ### 相关附加说明
